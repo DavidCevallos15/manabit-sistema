@@ -27,7 +27,9 @@ def build_config(args):
         description="Agentes internos de David" if args.audience == "owner" else "Recepción y agenda pública de Manabit",
         staging_bucket=args.bucket, service_account=args.service_account,
         requirements=str(root / "requirements.txt"),
-        extra_packages=[str(root / "factory.py"), str(root / "tools.py")],
+        # Rutas relativas: el SDK usa tar.add(ruta) y el runtime importa `factory` y `tools`
+        # desde la raíz del paquete. Con rutas absolutas quedarían en Users/.../agents/.
+        extra_packages=["factory.py", "tools.py"],
         env_vars=env, python_version="3.14", min_instances=0, max_instances=2,
     )
 
@@ -47,6 +49,10 @@ def main():
     parser.add_argument("--update", metavar="RESOURCE", default="",
         help="projects/ID/locations/REGION/reasoningEngines/NUM existente: con --execute lo actualiza en vez de crear otro.")
     args = parser.parse_args()
+    os.chdir(Path(__file__).resolve().parent)
+    for name in ("factory.py", "tools.py", "requirements.txt"):
+        if not Path(name).is_file():
+            parser.error(f"Falta {name} junto a deploy.py.")
     url = urlparse(args.api_url)
     if url.scheme != "https" or not url.hostname or url.hostname in ("localhost", "127.0.0.1"):
         parser.error("El runtime necesita una URL https pública del backend, no localhost.")

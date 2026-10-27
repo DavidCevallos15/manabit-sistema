@@ -1,6 +1,6 @@
 # Fase 2b: construir con Cloud Build y desplegar en Cloud Run (Firestore, sin redes activas).
 #   powershell -ExecutionPolicy Bypass -File scripts\gcp-desplegar.ps1
-# Repetirlo despliega una nueva revision del mismo servicio.
+# Repetirlo despliega una nueva revision; conserva variables ajenas (p. ej. GOOGLE_AGENT_ENGINE_ID).
 # Se valida $LASTEXITCODE: con "Stop", PowerShell 5.1 aborta por el stderr informativo de gcloud.
 $ErrorActionPreference = "Continue"
 Set-Location (Split-Path $PSScriptRoot)
@@ -31,7 +31,7 @@ $envVars = @(
   --service-account "manabit-web@$P.iam.gserviceaccount.com" `
   --allow-unauthenticated --min-instances 0 --max-instances 1 `
   --cpu 1 --memory 512Mi --timeout 120 --concurrency 40 `
-  --set-env-vars $envVars --set-secrets $secrets --quiet
+  --update-env-vars $envVars --update-secrets $secrets --quiet
 if ($LASTEXITCODE -ne 0) { throw "El despliegue fallo. Revisa el log de Cloud Build indicado arriba." }
 
 $urls = & gcloud run services describe $S --project $P --region $R --format="value(metadata.annotations.'run.googleapis.com/urls')"
