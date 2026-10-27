@@ -1,0 +1,16 @@
+# Lo que NO se sube a Cloud Build con `gcloud run deploy --source`.
+.gcloudignore
+.git
+.gitignore
+node_modules/
+.next/
+.env*
+.data/
+.data-qa/
+agents/
+tests/
+deploy/
+.taste-skill/
+.impeccable/
+*.log
+*.tsbuildinfo

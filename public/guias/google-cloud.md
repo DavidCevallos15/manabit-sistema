@@ -34,6 +34,8 @@ El entorno de desarrollo se verificó con ADK 2.13.0, SDK de Google 2.6.0 y Pyth
 
 ## Desplegar primero la web y la base
 
+Atajo para el piloto, desde la carpeta del proyecto en PowerShell normal: `scripts\gcp-preparar.ps1` (permiso de Firestore, cinco secretos generados sin mostrarse y accesos mínimos; solo pide la contraseña del panel) y después `scripts\gcp-desplegar.ps1` (Cloud Build + Cloud Run con Firestore, comprueba el 401 del panel y los horarios). `.gcloudignore` evita subir `.env*`, `.data`, `agents` y `node_modules`. Los pasos siguientes detallan lo que hacen.
+
 1. Crea la base Firestore en modo nativo, `(default)`, en `us-central1`: `gcloud firestore databases create --location=us-central1 --type=firestore-native`. Solo la base `(default)` tiene cuota gratuita. No hay usuarios ni contraseñas: Cloud Run entra con la cuenta `manabit-web` y el rol `roles/datastore.user`.
 2. Opcional: borra contadores de límite vencidos con TTL: `gcloud firestore fields ttls update expireAt --collection-group=rate_limits --enable-ttl`.
 3. Guarda `SESSION_SECRET` (32+ caracteres), `ADMIN_PASSWORD` (16+), `MANABIT_TOOLS_TOKEN`, `MANABIT_OWNER_TOOLS_TOKEN` y `WORKER_TOKEN` en Secret Manager, con valores distintos, y da a `manabit-web` Secret Accessor solo sobre esos secretos. `DATABASE_URL` no aplica con Firestore.
