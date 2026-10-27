@@ -1,0 +1,46 @@
+/* manabit · loader (1,6 s en bucle). Importado por ManabitLoader.tsx */
+.mnb-body {
+  animation: mnb-sweep 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+.mnb-bit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mnb-pulse 1.6s linear infinite;
+}
+@keyframes mnb-sweep {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  42%,
+  62% {
+    clip-path: inset(0 0 0 0);
+  }
+  90%,
+  100% {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+@keyframes mnb-pulse {
+  0%,
+  42%,
+  60%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mnb-body {
+    animation: none;
+  }
+  .mnb-bit {
+    animation: mnb-blink 1.6s steps(1, end) infinite;
+  }
+  @keyframes mnb-blink {
+    50% {
+      opacity: 0.3;
+    }
+  }
+}

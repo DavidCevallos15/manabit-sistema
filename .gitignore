@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+*.tsbuildinfo
+.next/
+next-env.d.ts
+.data/
+.data-qa/
+.taste-skill/
+.impeccable/
+agents/.venv/
+__pycache__/
+*.pyc
+.adk/
