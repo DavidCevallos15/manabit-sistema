@@ -25,9 +25,21 @@ CREATE TABLE IF NOT EXISTS rate_limits (id TEXT PRIMARY KEY, count INTEGER NOT N
 async function open(): Promise<DB> {
   let db: DB;
   if (process.env.DATABASE_URL) {
+    // Supabase/pooler con CA propia: pasa el certificado en DATABASE_CA_CERT y verifica el host.
+    // pg prioriza sslmode de la URL sobre la opción ssl, así que no se permiten ambos.
+    const ca = process.env.DATABASE_CA_CERT?.replace(/\\n/g, "\n").trim();
+    if (ca && /[?&]sslmode=/i.test(process.env.DATABASE_URL))
+      throw new Error(
+        "Quita sslmode de DATABASE_URL cuando configures DATABASE_CA_CERT.",
+      );
+    if (process.env.K_SERVICE && !ca && !/[?&]sslmode=/i.test(process.env.DATABASE_URL))
+      throw new Error(
+        "En Cloud Run la base necesita TLS: configura DATABASE_CA_CERT o sslmode.",
+      );
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 8,
+      max: Number(process.env.DATABASE_POOL_MAX || 5),
+      ...(ca ? { ssl: { ca, rejectUnauthorized: true } } : {}),
     });
     db = {
       dialect: "postgres",
