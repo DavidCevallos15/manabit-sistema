@@ -2,7 +2,8 @@
 # Ejecutar en PowerShell normal desde la carpeta del proyecto:
 #   powershell -ExecutionPolicy Bypass -File scripts\gcp-preparar.ps1
 # Los valores se generan aqui y se suben sin mostrarse. Solo ADMIN_PASSWORD la escribes tu.
-$ErrorActionPreference = "Stop"
+# PowerShell 5.1 convierte el stderr de gcloud en error fatal con "Stop"; se valida $LASTEXITCODE.
+$ErrorActionPreference = "Continue"
 $P = "manabit-sistema"
 $web = "serviceAccount:manabit-web@$P.iam.gserviceaccount.com"
 $agentPublic = "serviceAccount:manabit-agent-public@$P.iam.gserviceaccount.com"
@@ -21,6 +22,11 @@ for ($i = 1; $i -le 5; $i++) {
   Start-Sleep -Seconds (2 * $i)
 }
 
+function Test-Secret([string]$Name) {
+  & gcloud secrets describe $Name --project $P --format="value(name)" 2>&1 | Out-Null
+  return ($LASTEXITCODE -eq 0)
+}
+
 function New-RandomHex {
   $bytes = New-Object byte[] 32
   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
@@ -28,8 +34,7 @@ function New-RandomHex {
 }
 
 function Set-Secret([string]$Name, [string]$Value) {
-  & gcloud secrets describe $Name --project $P --format="value(name)" 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) { Write-Host "--  $Name ya existe; se conserva"; return }
+  if (Test-Secret $Name) { Write-Host "--  $Name ya existe; se conserva"; return }
   # Archivo temporal sin salto de linea final (un pipe de PowerShell lo anadiria).
   $tmp = [IO.Path]::GetTempFileName()
   try {
@@ -40,8 +45,7 @@ function Set-Secret([string]$Name, [string]$Value) {
 }
 
 # 2. Contrasena del panel (no se muestra; guardala en tu gestor de contrasenas)
-& gcloud secrets describe manabit-admin-password --project $P --format="value(name)" 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) {
+if (-not (Test-Secret "manabit-admin-password")) {
   do {
     $s1 = Read-Host "Contrasena del panel (16+ caracteres)" -AsSecureString
     $s2 = Read-Host "Repitela" -AsSecureString

@@ -1,10 +1,16 @@
 # Fase 2b: construir con Cloud Build y desplegar en Cloud Run (Firestore, sin redes activas).
 #   powershell -ExecutionPolicy Bypass -File scripts\gcp-desplegar.ps1
 # Repetirlo despliega una nueva revision del mismo servicio.
-$ErrorActionPreference = "Stop"
+# Se valida $LASTEXITCODE: con "Stop", PowerShell 5.1 aborta por el stderr informativo de gcloud.
+$ErrorActionPreference = "Continue"
 Set-Location (Split-Path $PSScriptRoot)
 $P = "manabit-sistema"; $R = "us-central1"; $S = "manabit-sistema"
 $number = (& gcloud projects describe $P --format="value(projectNumber)").Trim()
+if (-not $number) { throw "No se pudo leer el numero del proyecto $P" }
+foreach ($name in "manabit-admin-password", "manabit-session-secret", "manabit-tools-public", "manabit-tools-owner", "manabit-worker-token") {
+  & gcloud secrets describe $name --project $P --format="value(name)" 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Falta el secreto $name. Ejecuta primero scripts\gcp-preparar.ps1" }
+}
 $url = "https://$S-$number.$R.run.app"
 
 $secrets = @(
