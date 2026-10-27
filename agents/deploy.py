@@ -1,5 +1,6 @@
-"""Revisa el paquete sin red; --execute crea UN runtime en el proyecto indicado."""
+"""Revisa el paquete sin red; --execute crea UN runtime, o actualiza uno existente con --update."""
 import argparse
+import re
 import json
 import os
 from pathlib import Path
@@ -43,6 +44,8 @@ def main():
     parser.add_argument("--api-url", required=True, help="URL https de Manabit en Cloud Run")
     parser.add_argument("--secret-version", required=True, help="projects/ID/secrets/NOMBRE/versions/1; no el valor del secreto")
     parser.add_argument("--execute", action="store_true", help="Crea recursos facturables. Sin este flag solo valida localmente.")
+    parser.add_argument("--update", metavar="RESOURCE", default="",
+        help="projects/ID/locations/REGION/reasoningEngines/NUM existente: con --execute lo actualiza en vez de crear otro.")
     args = parser.parse_args()
     url = urlparse(args.api_url)
     if url.scheme != "https" or not url.hostname or url.hostname in ("localhost", "127.0.0.1"):
@@ -51,6 +54,10 @@ def main():
         parser.error("Revisa bucket y nombre de versión de Secret Manager.")
     if not args.service_account.endswith(".iam.gserviceaccount.com"):
         parser.error("Usa una cuenta de servicio específica del runtime.")
+    if args.update and not re.fullmatch(r"projects/[^/]+/locations/[^/]+/reasoningEngines/[^/]+", args.update):
+        parser.error("--update necesita el nombre completo del recurso reasoningEngines.")
+    if args.update and f"/locations/{args.location}/" not in args.update:
+        parser.error("La región de --update no coincide con --location.")
     # El modelo queda serializado dentro del grafo; se define antes de construirlo.
     os.environ["MANABIT_GEMINI_MODEL"] = args.model
     root = owner_agent() if args.audience == "owner" else customer_agent()
@@ -59,11 +66,16 @@ def main():
         print(json.dumps({"checked": True, "deployed": False, "root": root.name,
             "subagents": [a.name for a in root.sub_agents], "project": args.project,
             "location": args.location, "model": args.model,
+            "action": "update" if args.update else "create", "target": args.update or None,
             "packages": config.extra_packages}, indent=2))
         return
     vertexai.init(project=args.project, location=args.location)
     app = AdkApp(agent=root, enable_tracing=False)
     client = vertexai.Client(project=args.project, location=args.location)
+    if args.update:
+        remote = client.agent_engines.update(name=args.update, agent=app, config=config)
+        print("Recurso actualizado:", remote.api_resource.name)
+        return
     remote = client.agent_engines.create(agent=app, config=config)
     print("Recurso creado:", remote.api_resource.name)
     print("Configura", "GOOGLE_OWNER_AGENT_ENGINE_ID" if args.audience == "owner" else "GOOGLE_AGENT_ENGINE_ID", "en el backend.")

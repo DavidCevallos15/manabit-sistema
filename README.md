@@ -49,11 +49,11 @@ Se despliegan **dos runtimes**, no seis aplicaciones sueltas. Los subagentes est
 
 ## Próximo paso de David
 
-Crea un proyecto de Google Cloud con nombre visible **Manabit Sistema** y un ID único. No necesitas crear los seis agentes manualmente. El paquete ya contiene sus nombres, herramientas e instrucciones.
+El proyecto de Google Cloud ya está creado: **`manabit-sistema`**. Los seis agentes están definidos en código; no necesitas crearlos manualmente en la consola. El presupuesto del piloto es **menos de USD 10 al mes**; el despliegue cloud debe ajustarse a ese límite antes de crear servicios con cargos.
 
 [Guía de Google Cloud](docs/GOOGLE-CLOUD.md) · [Prueba paso a paso](docs/PRIMEROS-PASOS.md) · [Canales](docs/CANALES.md) · [Revisión de referencias de Platzi](docs/revision-repos-platzi.md).
 
-No hay un proyecto de Google configurado ni recursos cloud desplegados en esta entrega. El script `agents/deploy.py` valida localmente por defecto; solo crea recursos al añadir `--execute`.
+Se verificó el proyecto `manabit-sistema` y se habilitaron sus APIs base. Todavía no hay servicios de la aplicación ni runtimes desplegados. El script `agents/deploy.py` valida localmente por defecto; solo crea recursos al añadir `--execute`.
 
 ## Configuración y despliegue
 

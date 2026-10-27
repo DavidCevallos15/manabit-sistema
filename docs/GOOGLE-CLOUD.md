@@ -4,7 +4,9 @@
 
 En https://console.cloud.google.com/projectcreate crea un proyecto con nombre visible **Manabit Sistema**. El ID debe ser único; por ejemplo `manabit-sistema-david` solo si está disponible. Guarda ese ID y la cuenta que lo administra. No crees seis agentes desde el asistente visual: el grafo ADK ya está en este proyecto.
 
-En esta entrega no se ha seleccionado un proyecto ni se han creado recursos facturables. Los comandos siguientes son una guía para ejecutar después de crear tu proyecto. Los valores `TU_PROJECT_ID`, `TU_REGION`, etc. se sustituyen por recursos tuyos.
+Proyecto creado y verificado: **`manabit-sistema`**, número **`130360510916`**. Está activo y tiene facturación habilitada. Se habilitaron las APIs base de despliegue; todavía no se han creado instancias de Cloud SQL, servicios Cloud Run ni runtimes ADK. En los comandos siguientes usa `manabit-sistema` donde aparece `TU_PROJECT_ID`.
+
+**Presupuesto del piloto: menos de USD 10 al mes.** El despliegue de producción con Cloud SQL sigue como arquitectura de referencia y no se activa automáticamente con ese presupuesto. Primero hay que ajustar y estimar los componentes del piloto; no se promete que la arquitectura completa entre en ese importe. Un presupuesto con alertas no funciona como corte automático de consumo.
 
 ## Arquitectura de despliegue
 
@@ -60,7 +62,7 @@ Ejemplo de revisión sin desplegar, desde `agents`:
 .venv/Scripts/python.exe deploy.py --project TU_PROJECT_ID --bucket gs://TU_BUCKET --service-account manabit-agent-public@TU_PROJECT_ID.iam.gserviceaccount.com --api-url https://TU_SERVICIO.run.app --secret-version projects/TU_PROJECT_ID/secrets/manabit-tools-public/versions/1
 ```
 
-El resultado debe indicar `checked: true` y `deployed: false`. Para crear el runtime, ejecuta ese mismo comando añadiendo `--execute`. **Cada ejecución con ese flag crea un recurso nuevo**; no es un actualizador. Conserva su nombre para actualizarlo o retirarlo en Google Cloud y evitar runtimes duplicados.
+El resultado debe indicar `checked: true` y `deployed: false`. Para crear el runtime, ejecuta ese mismo comando añadiendo `--execute`. **Cada `--execute` sin `--update` crea un recurso nuevo.** Conserva el nombre devuelto y, para desplegar cambios, repite el comando con `--execute --update projects/ID/locations/REGION/reasoningEngines/NUMERO`. Así no se duplican runtimes.
 
 El script usa `vertexai.Client().agent_engines.create(agent=AdkApp(...))`, escala de cero a dos instancias y empaqueta solo `factory.py` y `tools.py`, más dependencias declaradas. No empaqueta `.env`, SQLite ni la web. La URL de herramientas debe ser accesible desde Google; `localhost` no sirve.
 
