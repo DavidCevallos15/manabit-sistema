@@ -11,4 +11,6 @@
 - Responsive: estructura de escritorio 1440 × 900 sin desbordamiento horizontal; menú, agentes y recepción a 390 px, revisados también en iframe de ese ancho porque la captura de Chrome con viewport emulado falló. Se corrigieron el encaje vertical del chat y una colisión de estilo del mensaje de David.
 - Detector de Impeccable: sin hallazgos. Lint de Taste con modo app: sin errores; advertencia de cero inicial revisada como formato real de reloj.
 
-No verificado: PostgreSQL real, imagen Docker (daemon no disponible), runtime Google de una cuenta, costes/cuotas del proyecto, permisos y entregas de redes, ni sincronización con Google Calendar. Estos puntos forman parte de la activación posterior, no de la demo local.
+- Firestore (27/10/2026): 11 pruebas contra el emulador (5 de contrato: 4 reservas simultáneas, idempotencia, cancelación, claim, caché, leases y límites; 6 del sistema con `DATABASE_BACKEND=firestore`), `verify:production` y build standalone con `K_SERVICE` sobre Firestore.
+
+No verificado: Firestore real, PostgreSQL real, imagen Docker (daemon no disponible), runtime Google de una cuenta, costes/cuotas del proyecto, permisos y entregas de redes, ni sincronización con Google Calendar. Estos puntos forman parte de la activación posterior, no de la demo local.

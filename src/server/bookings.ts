@@ -1,85 +1,13 @@
 import { BookingError, bookAppointment } from "../core/booking.ts";
 import type { Booking, BookingRepository, Channel } from "../core/types.ts";
-import { database, getRecord, putRecord } from "./db.ts";
+import { getRecord, putRecord, store } from "./db.ts";
 import { initialProfile, type Profile } from "./profile.ts";
 
 export const persistentBookings: BookingRepository = {
-  async list(tenant) {
-    const db = await database();
-    const r = await db.query(
-      "SELECT payload FROM appointments WHERE tenant=$1 ORDER BY blocked_start",
-      [tenant],
-    );
-    return r.rows.map((row) => JSON.parse(String(row.payload)) as Booking);
-  },
-  async insertIfAvailable(booking) {
-    const db = await database();
-    try {
-      const same = (await this.list(booking.tenantId)).find(
-        (b) => b.idempotencyKey === booking.idempotencyKey,
-      );
-      if (same) {
-        if (same.requestFingerprint !== booking.requestFingerprint)
-          throw new BookingError(
-            "IDEMPOTENCY_CONFLICT",
-            "La operación ya tiene otros datos.",
-          );
-        return same;
-      }
-      // SQLite ejecuta este INSERT...SELECT de forma atómica; PostgreSQL añade exclusión de rangos.
-      const r = await db.query(
-        `INSERT INTO appointments(tenant,id,professional,blocked_start,blocked_end,status,idem,payload)
-        SELECT $1,$2,$3,$4,$5,$6,$7,$8 WHERE NOT EXISTS
-        (SELECT 1 FROM appointments WHERE tenant=$9 AND professional=$10 AND status<>'cancelled' AND blocked_start<$11 AND blocked_end>$12)`,
-        [
-          booking.tenantId,
-          booking.id,
-          booking.professionalId,
-          booking.blockedStartAt,
-          booking.blockedEndAt,
-          booking.status,
-          booking.idempotencyKey,
-          JSON.stringify(booking),
-          booking.tenantId,
-          booking.professionalId,
-          booking.blockedEndAt,
-          booking.blockedStartAt,
-        ],
-      );
-      if (!r.changes)
-        throw new BookingError(
-          "SLOT_TAKEN",
-          "Ese horario se acaba de ocupar. Elige otro.",
-        );
-      return booking;
-    } catch (e) {
-      if (
-        e &&
-        typeof e === "object" &&
-        "code" in e &&
-        ["23505", "SQLITE_CONSTRAINT_UNIQUE"].includes(String(e.code))
-      ) {
-        const same = (await this.list(booking.tenantId)).find(
-          (b) => b.idempotencyKey === booking.idempotencyKey,
-        );
-        if (same?.requestFingerprint === booking.requestFingerprint)
-          return same;
-      }
-      if (e && typeof e === "object" && "code" in e && e.code === "23P01")
-        throw new BookingError("SLOT_TAKEN", "Ese horario ya está ocupado.");
-      throw e;
-    }
-  },
-  async cancel(tenant, id) {
-    const booking = (await this.list(tenant)).find((b) => b.id === id);
-    if (!booking) throw new BookingError("NOT_FOUND", "No existe esa cita.");
-    booking.status = "cancelled";
-    const db = await database();
-    await db.query(
-      "UPDATE appointments SET status=$1,payload=$2 WHERE tenant=$3 AND id=$4",
-      [booking.status, JSON.stringify(booking), tenant, id],
-    );
-  },
+  list: async (tenant) => (await store()).bookings.list(tenant),
+  insertIfAvailable: async (booking) =>
+    (await store()).bookings.insertIfAvailable(booking),
+  cancel: async (tenant, id) => (await store()).bookings.cancel(tenant, id),
 };
 export async function profile() {
   return (

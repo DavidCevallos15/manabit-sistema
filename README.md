@@ -26,7 +26,7 @@ En desarrollo, el panel permite acceso desde localhost. En producción exige ses
 - Panel con conversaciones, respuesta manual, pausa de automatización, tareas, agenda, cancelación y descarga `.ics`.
 - Seis agentes ADK escritos en Python, agrupados en dos entradas separadas: atención pública y dirección interna. Las propuestas de cita requieren aceptación explícita del cliente antes de registrar una reserva.
 - Adaptadores de texto para WhatsApp Cloud API, Instagram, Messenger y Telegram: firma de webhook, persistencia de eventos, deduplicación y estado de envío. Necesitan configurar y validar las cuentas reales.
-- SQLite para desarrollo y adaptador PostgreSQL para despliegue. PostgreSQL incluye restricción de exclusión para evitar solapamientos entre instancias.
+- SQLite para desarrollo y **Firestore** en Cloud Run (`DATABASE_BACKEND=firestore`): reservas en transacción con lock por profesional, idempotencia y caché de listados para contener lecturas. El adaptador PostgreSQL se conserva para una etapa multiempresa.
 
 ## Agentes y orquestación
 
@@ -63,7 +63,7 @@ node scripts/setup-local.mjs
 
 Genera `.env.local` con secretos distintos sin imprimirlos. La configuración de Google y las redes permanece vacía y los envíos sociales están pausados. Para Google local usa ADC; no incluyas claves de cuentas de servicio en el navegador.
 
-La imagen `Dockerfile` ejecuta Next.js en Cloud Run con Node 24. Allí es obligatorio `DATABASE_URL` de PostgreSQL, además de las credenciales del propietario y `APP_URL` de producción. [Arquitectura y límites](docs/arquitectura.md).
+La imagen `Dockerfile` ejecuta Next.js en Cloud Run con Node 24. Allí es obligatorio `DATABASE_BACKEND=firestore` (o `DATABASE_URL` de PostgreSQL), además de las credenciales del propietario y `APP_URL` de producción. [Arquitectura y límites](docs/arquitectura.md).
 
 ## Verificación
 
@@ -76,7 +76,7 @@ npm run verify:production
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-**21 pruebas Node y 5 pruebas Python correctas**, más una prueba HTTP del build en producción (login, panel privado, origen, permisos y chat). Las pruebas cubren horarios, aceptación, reintentos, concurrencia local, persistencia SQLite, firmas, permisos de herramientas y separación de los dos grafos ADK. No se han ejecutado llamadas a Gemini, pruebas contra cuentas sociales, despliegues cloud ni pruebas contra PostgreSQL real. La compilación y el recorrido web se verifican localmente.
+**22 pruebas Node (más 4 de Firestore con emulador) y 5 pruebas Python correctas**, más una prueba HTTP del build en producción (login, panel privado, origen, permisos y chat). Las pruebas cubren horarios, aceptación, reintentos, concurrencia local, persistencia SQLite, firmas, permisos de herramientas y separación de los dos grafos ADK. Firestore se prueba con `FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 npm test` (emulador: `gcloud emulators firestore start --host-port=127.0.0.1:8085`). No se han ejecutado llamadas a Gemini, pruebas contra cuentas sociales, despliegues cloud ni pruebas contra Firestore o PostgreSQL reales. La compilación y el recorrido web se verifican localmente.
 
 ## Límites del piloto
 

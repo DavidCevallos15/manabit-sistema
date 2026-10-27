@@ -11,7 +11,7 @@ import {
   profile,
   availableSlots,
 } from "../src/server/bookings.ts";
-import { database, getRecord } from "../src/server/db.ts";
+import { getRecord } from "../src/server/db.ts";
 import {
   ensureConversation,
   receiveMessage,
@@ -41,7 +41,7 @@ test("perfil real de Manabit usa lunes a viernes 09–17 y diagnósticos de 15 m
     p.business.hours.every((h) => h.from === "09:00" && h.to === "17:00"),
   );
 });
-test("SQLite persiste una reserva y rechaza dos solicitudes simultáneas para el mismo espacio", async () => {
+test("el almacén persiste una reserva y rechaza dos solicitudes simultáneas para el mismo espacio", async () => {
   const p = await profile();
   const now = new Date("2029-01-01T00:00:00Z");
   const input = {
@@ -63,11 +63,10 @@ test("SQLite persiste una reserva y rechaza dos solicitudes simultáneas para el
     ),
   ]);
   assert.equal(result.filter((r) => r.status === "fulfilled").length, 1);
-  const db = await database();
-  const r = await db.query("SELECT payload FROM appointments WHERE tenant=$1", [
-    "manabit",
-  ]);
-  assert.equal(r.rows.length, 1);
+  const saved = (await persistentBookings.list("manabit")).filter(
+    (b) => b.startAt === new Date(input.startAt).toISOString(),
+  );
+  assert.equal(saved.length, 1);
 });
 test("repetir el mensaje no duplica turnos ni respuesta; hablar con David pausa el asistente", async () => {
   const c = await ensureConversation(`test:${randomUUID()}`);

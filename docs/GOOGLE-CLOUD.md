@@ -4,16 +4,16 @@
 
 En https://console.cloud.google.com/projectcreate crea un proyecto con nombre visible **Manabit Sistema**. El ID debe ser único; por ejemplo `manabit-sistema-david` solo si está disponible. Guarda ese ID y la cuenta que lo administra. No crees seis agentes desde el asistente visual: el grafo ADK ya está en este proyecto.
 
-Proyecto creado y verificado: **`manabit-sistema`**, número **`130360510916`**. Está activo y tiene facturación habilitada. Se habilitaron las APIs base de despliegue; todavía no se han creado instancias de Cloud SQL, servicios Cloud Run ni runtimes ADK. En los comandos siguientes usa `manabit-sistema` donde aparece `TU_PROJECT_ID`.
+Proyecto creado y verificado: **`manabit-sistema`**, número **`130360510916`**. Está activo y tiene facturación habilitada. Se habilitaron las APIs base de despliegue; todavía no se han creado la base Firestore, servicios Cloud Run ni runtimes ADK. En los comandos siguientes usa `manabit-sistema` donde aparece `TU_PROJECT_ID`.
 
-**Presupuesto del piloto: menos de USD 10 al mes.** El despliegue de producción con Cloud SQL sigue como arquitectura de referencia y no se activa automáticamente con ese presupuesto. Primero hay que ajustar y estimar los componentes del piloto; no se promete que la arquitectura completa entre en ese importe. Un presupuesto con alertas no funciona como corte automático de consumo.
+**Presupuesto del piloto: menos de USD 10 al mes.** Por eso el piloto usa **Firestore** en lugar de Cloud SQL: no cobra por instancia encendida y la base `(default)` tiene cuota gratuita diaria. Cloud Run y Agent Runtime escalan a cero. PostgreSQL sigue soportado con `DATABASE_URL` para una etapa multiempresa. Un presupuesto con alertas no funciona como corte automático de consumo.
 
 ## Arquitectura de despliegue
 
 | Recurso | Nombre propuesto | Función |
 | --- | --- | --- |
 | Cloud Run | manabit-sistema | Web pública, panel privado, API y webhooks |
-| Cloud SQL PostgreSQL | manabit-db | Conversaciones, agenda, tareas y eventos |
+| Firestore (modo nativo) | `(default)` en us-central1 | Conversaciones, agenda, tareas y eventos |
 | Agent Runtime público | manabit-atencion | Recepción + Asesor + Agenda + Soporte |
 | Agent Runtime interno | manabit-direccion | Gerente + Ideas, opcional en la primera prueba |
 | Secret Manager | secretos separados | Sesión, login, base de datos, herramientas y redes |
@@ -24,25 +24,37 @@ Agent Runtime aparece en la documentación de Gemini Enterprise Agent Platform; 
 
 ## Cuenta, APIs y permisos
 
-1. Vincula la facturación y configura un presupuesto con alertas. La alerta no detiene por sí sola el gasto. No se presupone que Cloud SQL o las llamadas a Gemini sean gratuitas.
+1. Vincula la facturación y configura un presupuesto con alertas. La alerta no detiene por sí sola el gasto. No se presupone que Firestore, Agent Runtime o las llamadas a Gemini sean gratuitos fuera de sus cuotas.
 2. Selecciona el proyecto con `gcloud config set project TU_PROJECT_ID` e inicia ADC para desarrollo con `gcloud auth application-default login`. La sesión de `gcloud auth login` y las credenciales ADC son distintas.
-3. Habilita las APIs que usarás: `aiplatform.googleapis.com`, `run.googleapis.com`, `sqladmin.googleapis.com`, `secretmanager.googleapis.com`, `storage.googleapis.com`, `artifactregistry.googleapis.com`, `cloudbuild.googleapis.com` y, antes de conectar redes, `cloudscheduler.googleapis.com`.
-4. Crea tres cuentas de servicio: `manabit-web`, `manabit-agent-public` y `manabit-agent-owner`. Web necesita invocar los runtimes y conectar a Cloud SQL; cada agente necesita invocar Gemini y leer únicamente su propio secreto de herramientas. Otorga Secret Accessor sobre secretos concretos, no todos los secretos del proyecto. No concedas Owner al runtime.
+3. Habilita las APIs que usarás: `aiplatform.googleapis.com`, `run.googleapis.com`, `firestore.googleapis.com`, `secretmanager.googleapis.com`, `storage.googleapis.com`, `artifactregistry.googleapis.com`, `cloudbuild.googleapis.com` y, antes de conectar redes, `cloudscheduler.googleapis.com`.
+4. Crea tres cuentas de servicio: `manabit-web`, `manabit-agent-public` y `manabit-agent-owner`. Web necesita invocar los runtimes y leer/escribir Firestore (`roles/datastore.user`); cada agente necesita invocar Gemini y leer únicamente su propio secreto de herramientas. Otorga Secret Accessor sobre secretos concretos, no todos los secretos del proyecto. No concedas Owner al runtime.
 5. La persona que despliega necesita permisos de creación de recursos y permiso `actAs` sobre las cuentas de servicio. Verifica las políticas de tu organización; no se automatizan cambios IAM en este proyecto.
 
 El entorno de desarrollo se verificó con ADK 2.13.0, SDK de Google 2.6.0 y Python 3.14. El paquete fija esas versiones. La región propuesta del runtime es `us-central1`; Gemini usa endpoint `global`. Mantén los datos y conexiones en las regiones elegidas y revisa disponibilidad del modelo en tu proyecto.
 
 ## Desplegar primero la web y la base
 
-1. Crea PostgreSQL en Cloud SQL, una base `manabit` y un usuario de aplicación. Activa respaldos. El esquema se inicializa al primer acceso; necesita crear `btree_gist` y la restricción de exclusión. Antes de varias instancias, realiza esa inicialización con una única instancia y comprueba la restricción. La migración automática no sustituye una estrategia de migraciones para producción.
-2. Guarda `DATABASE_URL`, `SESSION_SECRET` (32+ caracteres), `ADMIN_PASSWORD` (16+), `MANABIT_TOOLS_TOKEN`, `MANABIT_OWNER_TOOLS_TOKEN` y `WORKER_TOKEN` en Secret Manager, con valores distintos. El script local `node scripts/setup-local.mjs` ayuda a generar valores, pero no los sube ni los imprime. Carga los secretos por la consola o un flujo seguro.
-3. Crea Cloud Run desde el código usando el `Dockerfile`, adjunta la instancia Cloud SQL y la cuenta `manabit-web`. Para el piloto limita las instancias y configura tiempo de petición suficiente para el turno del agente, por ejemplo 120 segundos.
-4. En Cloud Run monta secretos como variables, configura `APP_URL` con su URL HTTPS real y deja `SOCIAL_AUTOMATION_ENABLED=false`. No uses SQLite en Cloud Run: el servidor lo rechaza.
-5. Para el socket Unix de Cloud SQL, la URL de `pg` puede usar el parámetro `host=/cloudsql/PROJECT:REGION:INSTANCE`. Codifica caracteres especiales de usuario/contraseña en la URL. No uses una IP pública sin el control de red y TLS apropiado.
+1. Crea la base Firestore en modo nativo, `(default)`, en `us-central1`: `gcloud firestore databases create --location=us-central1 --type=firestore-native`. Solo la base `(default)` tiene cuota gratuita. No hay usuarios ni contraseñas: Cloud Run entra con la cuenta `manabit-web` y el rol `roles/datastore.user`.
+2. Opcional: borra contadores de límite vencidos con TTL: `gcloud firestore fields ttls update expireAt --collection-group=rate_limits --enable-ttl`.
+3. Guarda `SESSION_SECRET` (32+ caracteres), `ADMIN_PASSWORD` (16+), `MANABIT_TOOLS_TOKEN`, `MANABIT_OWNER_TOOLS_TOKEN` y `WORKER_TOKEN` en Secret Manager, con valores distintos, y da a `manabit-web` Secret Accessor solo sobre esos secretos. `DATABASE_URL` no aplica con Firestore.
+4. Despliega Cloud Run desde el `Dockerfile` con la cuenta `manabit-web`, `DATABASE_BACKEND=firestore`, `min-instances=0`, `max-instances=1` y timeout de 120 s para el turno del agente.
+5. Configura `APP_URL` con la URL HTTPS real y deja `SOCIAL_AUTOMATION_ENABLED=false`. No uses SQLite en Cloud Run: el servidor lo rechaza.
 6. La recepción requiere acceso público al servicio. Las rutas `/api/admin/*` exigen login en producción, las herramientas llevan bearer separado y los webhooks verifican firma. Comprueba desde un navegador sin sesión que `/api/admin/state` devuelve 401 antes de compartir la URL.
 7. Prueba `/reservar`, crea y cancela una cita con datos de prueba. La aplicación empieza en modo guiado; la web ya debe poder guardar citas antes de conectar Gemini.
 
-No se ha ejecutado la imagen Docker ni una prueba PostgreSQL real en esta entrega: Docker Desktop no estaba disponible. Esa validación es parte de la activación cloud.
+### Modelo en Firestore y costes
+
+| Ruta | Contenido |
+| --- | --- |
+| `tenants/{tenant}/{tipo}/{id}` | Conversaciones, contactos, tareas, borradores, eventos, entregas y configuración (JSON en `payload`) |
+| `tenants/{tenant}/appointments/{id}` | Citas |
+| `tenants/{tenant}/appointmentKeys/{clave}` | Idempotencia: una clave, una cita |
+| `tenants/{tenant}/agendaLocks/{profesional}` | Serializa reservas del mismo profesional dentro de una transacción |
+| `leases/{nombre}`, `rate_limits/{id}` | Coordinación entre procesos y límites de uso |
+
+Una reserva se valida en una transacción que lee la agenda del profesional y escribe su lock: dos reservas simultáneas chocan y la segunda ve la primera. Firestore cobra por documento leído y el panel se refresca cada 8 s, así que los listados se cachean en memoria (`FIRESTORE_LIST_CACHE_SECONDS`, 60 por defecto) y se invalidan en cada escritura del proceso. Con `max-instances=1` el caché es coherente; con más instancias, el TTL acota cuánto tarda en verse un cambio de otra.
+
+Verificado contra el emulador de Firestore (concurrencia, idempotencia, cancelación, leases, límites y los flujos del sistema) y con el build standalone en modo Cloud Run. Falta la prueba contra la base real y la imagen Docker; ambas son parte de la activación.
 
 ## Desplegar el runtime público
 

@@ -2,7 +2,7 @@
 
 ## Piloto actual
 
-Next.js 16 sirve el panel y el chat público, con API Node.js y cookies firmadas. SQLite local conserva conversaciones, tareas, propuestas, consentimientos, eventos, entregas y citas. PostgreSQL es el adaptador de producción. El núcleo TypeScript valida reglas sin depender del modelo.
+Next.js 16 sirve el panel y el chat público, con API Node.js y cookies firmadas. SQLite local conserva conversaciones, tareas, propuestas, consentimientos, eventos, entregas y citas. En Cloud Run se usa Firestore; PostgreSQL queda como adaptador alternativo. El núcleo TypeScript valida reglas sin depender del modelo.
 
 El backend se conecta mediante ADC a dos runtimes ADK: atención pública y dirección interna. Python llama herramientas HTTP limitadas a la audiencia. La información del negocio y la disponibilidad siempre se leen del servidor.
 
@@ -14,7 +14,7 @@ flowchart LR
   Jobs --> API
   API --> ADK[Runtime ADK de atención]
   ADK --> Tools[API de herramientas pública]
-  Tools --> DB[(PostgreSQL / Cloud SQL)]
+  Tools --> DB[(Firestore)]
   API --> DB
   Owner[David autenticado] --> API
   API --> Internal[Runtime ADK interno]
@@ -24,7 +24,7 @@ flowchart LR
 
 ## Escrituras críticas
 
-La reserva tiene clave de idempotencia y huella de sus datos. SQLite usa inserción atómica condicionada. PostgreSQL añade exclusión GiST de rangos por negocio y profesional. La cancelación libera el intervalo y conserva el registro. Se guardan horas UTC y se presentan en America/Guayaquil.
+La reserva tiene clave de idempotencia y huella de sus datos. SQLite usa inserción atómica condicionada. Firestore valida en una transacción que escribe un lock por profesional; PostgreSQL añade exclusión GiST de rangos. La cancelación libera el intervalo y conserva el registro. Se guardan horas UTC y se presentan en America/Guayaquil.
 
 Los mensajes y la intervención manual comparten exclusión por conversación. Los workers reclaman cada evento mediante un lease de base de datos; tras un fallo de proceso la reclamación vence en dos minutos. Un turno reentregado conserva el evento, no duplica la respuesta si ya terminó. No se garantiza exactamente una ejecución remota si el proceso muere durante una llamada a Gemini.
 
@@ -40,7 +40,7 @@ No hay sincronización con Google Calendar: una cita externa en tu calendario no
 
 ## Próximas etapas
 
-1. Desplegar web, PostgreSQL y runtime público; probar contratos REST y herramientas con la cuenta real.
+1. Desplegar web, Firestore y runtime público; probar contratos REST y herramientas con la cuenta real.
 2. Conectar una red y verificar mensajes, ventana de respuesta, fallos y recuperación del worker.
 3. Integrar Google Calendar, recordatorios y políticas de desplazamiento.
 4. Automatizar migraciones, respaldos, retención/exportación/eliminación de datos, alertas y evaluaciones del agente.
