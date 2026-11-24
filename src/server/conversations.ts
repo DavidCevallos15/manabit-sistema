@@ -209,7 +209,7 @@ async function processMessage(id: string, text: string, eventId: string) {
         message: text,
       });
       c.remoteSession = result.session;
-      answer = { text: result.text, author: "Google ADK · Manabit" };
+      answer = { text: result.text, author: result.author };
       // Una herramienta del agente puede haber cambiado el estado mientras respondía.
       const fresh = await getRecord<Conversation>("conversation", id);
       if (fresh) c = { ...fresh, remoteSession: result.session };

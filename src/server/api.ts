@@ -434,7 +434,7 @@ export async function handle(req: NextRequest) {
             message:
               kind === "summary"
                 ? "Revisa los resultados y dame prioridades."
-                : "Prepara una idea de contenido para Manabit y guarda el borrador.",
+                : "Prepara una idea de contenido para Manabit y devuelve el texto completo para revisar. El panel lo guardará automáticamente; no necesitas usar guardar_borrador en este turno.",
           });
           text = result.text;
           engine = "Google ADK";

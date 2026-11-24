@@ -1,6 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 
 export function agentConfigured(audience = "customer") {
+  if (process.env.MANABIT_LOCAL_ADK_URL) return true;
   return !!(audience === "owner"
     ? process.env.GOOGLE_OWNER_AGENT_ENGINE_ID
     : process.env.GOOGLE_AGENT_ENGINE_ID);
@@ -55,6 +56,45 @@ export async function askGoogle(input: {
   audience?: string;
 }) {
   const audience = input.audience || "customer";
+  if (process.env.MANABIT_LOCAL_ADK_URL) {
+    const url = new URL(process.env.MANABIT_LOCAL_ADK_URL);
+    const token = process.env.MANABIT_LOCAL_ADK_TOKEN || "";
+    if (
+      process.env.K_SERVICE ||
+      url.protocol !== "http:" ||
+      !["localhost", "127.0.0.1"].includes(url.hostname) ||
+      token.length < 32
+    )
+      throw new Error("La configuración del puente ADK local no es válida.");
+    const response = await fetch(new URL("/query", url), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        audience,
+        session: input.session?.startsWith("local:")
+          ? input.session.slice(6)
+          : undefined,
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    const result = await response.json();
+    if (!response.ok)
+      throw new Error(result.detail || "No se pudo consultar el agente local.");
+    if (typeof result.text !== "string" || typeof result.session !== "string")
+      throw new Error("El agente devolvió una respuesta incompleta.");
+    return {
+      text: result.text,
+      session: `local:${result.session}`,
+      author:
+        typeof result.author === "string"
+          ? result.author
+          : "Google ADK · Manabit",
+    };
+  }
   const { resource, location } = config(audience);
   let session = input.session;
   if (!session) {
@@ -128,5 +168,5 @@ export async function askGoogle(input: {
     throw new Error(
       "El agente terminó sin una respuesta visible. David puede revisar la conversación.",
     );
-  return { text, session };
+  return { text, session, author: "Google ADK · Manabit" };
 }

@@ -4,6 +4,10 @@ Recepción web, bandeja de conversaciones y agenda de diagnósticos de **Manabit
 
 ![Equipo de agentes de Manabit](docs/images/equipo-manabit.png)
 
+## Piloto con Gemini
+
+Ya existe un modo local que conecta la recepción web con los seis agentes ADK y Gemini en Vertex AI, con sesiones persistentes y un límite de consumo estimado de USD 8 mensuales para este proceso. [Iniciar el piloto local](docs/PILOTO-LOCAL.md). La web desplegada en Cloud Run y su Firestore permanecen independientes hasta activar allí los agentes.
+
 ## Probar ahora
 
 Requiere Node.js 24 o superior.
@@ -53,7 +57,7 @@ El proyecto de Google Cloud ya está creado: **`manabit-sistema`**. Los seis age
 
 [Guía de Google Cloud](docs/GOOGLE-CLOUD.md) · [Prueba paso a paso](docs/PRIMEROS-PASOS.md) · [Canales](docs/CANALES.md) · [Revisión de referencias de Platzi](docs/revision-repos-platzi.md).
 
-Se verificó el proyecto `manabit-sistema` y se habilitaron sus APIs base. Todavía no hay servicios de la aplicación ni runtimes desplegados. El script `agents/deploy.py` valida localmente por defecto; solo crea recursos al añadir `--execute`.
+Se verificó el proyecto `manabit-sistema` y se habilitaron sus APIs base. Existe una web en Cloud Run con Firestore; aún no tiene runtimes ADK conectados. El script `agents/deploy.py` valida localmente por defecto; solo crea recursos al añadir `--execute`.
 
 ## Configuración y despliegue
 
@@ -76,7 +80,7 @@ npm run verify:production
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-**22 pruebas Node (más 4 de Firestore con emulador) y 5 pruebas Python correctas**, más una prueba HTTP del build en producción (login, panel privado, origen, permisos y chat). Las pruebas cubren horarios, aceptación, reintentos, concurrencia local, persistencia SQLite, firmas, permisos de herramientas y separación de los dos grafos ADK. Firestore se prueba con `FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 npm test` (emulador: `gcloud emulators firestore start --host-port=127.0.0.1:8085`). No se han ejecutado llamadas a Gemini, pruebas contra cuentas sociales, despliegues cloud ni pruebas contra Firestore o PostgreSQL reales. La compilación y el recorrido web se verifican localmente.
+**23 pruebas Node y 10 pruebas Python correctas** (las 4 pruebas de Firestore requieren emulador), más una prueba HTTP del build en producción (login, panel privado, origen, permisos y chat). Las pruebas cubren horarios, aceptación, reintentos, concurrencia local, persistencia SQLite, firmas, permisos de herramientas y separación de los dos grafos ADK. Firestore se prueba con `FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 npm test` (emulador: `gcloud emulators firestore start --host-port=127.0.0.1:8085`). Se verificaron llamadas reales a Gemini desde el piloto local: planes, propuesta y aceptación de cita, atención humana, métricas e ideas. Las cuentas sociales, los agentes ADK en producción y las bases remotas necesitan validación adicional. La compilación y el recorrido web se verifican localmente.
 
 ## Límites del piloto
 

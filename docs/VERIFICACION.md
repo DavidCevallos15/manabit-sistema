@@ -1,4 +1,17 @@
-# Verificación de esta entrega
+# Piloto ADK / Vertex AI · 23 de noviembre de 2026
+
+- 23 pruebas Node correctas; 4 pruebas Firestore omitidas porque no se arrancó el emulador en esta verificación.
+- 10 pruebas Python correctas: incluye aislamiento del puente, persistencia de consumo, reservas concurrentes de saldo y rechazo de contexto excesivo.
+- Llamadas reales a Gemini 3.5 Flash en `manabit-sistema`: Asesor explicó Tongabit, Agenda consultó y propuso el 25 de noviembre a las 10:00 en el negocio de prueba, el backend confirmó tras el código del cliente y la cancelación liberó el espacio. Soporte derivó a David y pausó la automatización. Gerente consultó métricas e Ideas devolvió un borrador.
+- Compilación de producción, comprobación de tipos y prueba HTTP de producción correctas con Next.js 16.4.6. La prueba HTTP desactiva el puente para no generar consumo ni mezclar datos reales.
+- La recepción se probó también en el navegador, conservando el diseño de Manabit. Captura: `images/piloto-gemini.jpg`.
+- Consumo estimado registrado durante esas pruebas: USD 0,083953, 17 generaciones, sin reservas pendientes. No es una factura del proveedor.
+- Next.js actualizado de 16.4.3 a 16.4.6 para corregir el aviso verificado por npm audit. Quedan cuatro hallazgos moderados transitivos en la cadena google-gax/rimraf/glob/minimatch del adaptador Firestore; `npm audit fix` no los resolvió dentro de las versiones declaradas. No se forzaron actualizaciones incompatibles.
+- Se verificó que ya existe un servicio Cloud Run con Firestore. Este cambio activa el agente únicamente en el equipo local; no se desplegaron runtimes ni se modificó el servicio publicado.
+
+## Verificación inicial (histórica)
+
+Verificación de la entrega inicial
 
 - Node 24: 21 pruebas correctas de motor, persistencia SQLite, turnos, propuestas, firmas y permisos.
 - Python: 5 pruebas correctas; grafos separados, ausencia de confirmación directa, fallo de herramienta sin configuración y serialización de ambos AdkApp con el SDK instalado.

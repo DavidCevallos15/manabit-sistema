@@ -4,7 +4,7 @@
 
 En https://console.cloud.google.com/projectcreate crea un proyecto con nombre visible **Manabit Sistema**. El ID debe ser único; por ejemplo `manabit-sistema-david` solo si está disponible. Guarda ese ID y la cuenta que lo administra. No crees seis agentes desde el asistente visual: el grafo ADK ya está en este proyecto.
 
-Proyecto creado y verificado: **`manabit-sistema`**, número **`130360510916`**. Está activo y tiene facturación habilitada. Se habilitaron las APIs base de despliegue; todavía no se han creado la base Firestore, servicios Cloud Run ni runtimes ADK. En los comandos siguientes usa `manabit-sistema` donde aparece `TU_PROJECT_ID`.
+Proyecto creado y verificado: **`manabit-sistema`**, número **`130360510916`**. Está activo y tiene facturación habilitada. Se habilitaron las APIs base de despliegue; ya existe la web `manabit-sistema` en Cloud Run configurada con Firestore. A fecha 23 de noviembre de 2026 no hay runtimes ADK en us-central1. El piloto local sí conecta los agentes con Gemini: consulta [PILOTO-LOCAL.md](PILOTO-LOCAL.md). En los comandos siguientes usa `manabit-sistema` donde aparece `TU_PROJECT_ID`.
 
 **Presupuesto del piloto: menos de USD 10 al mes.** Por eso el piloto usa **Firestore** en lugar de Cloud SQL: no cobra por instancia encendida y la base `(default)` tiene cuota gratuita diaria. Cloud Run y Agent Runtime escalan a cero. PostgreSQL sigue soportado con `DATABASE_URL` para una etapa multiempresa. Un presupuesto con alertas no funciona como corte automático de consumo.
 
